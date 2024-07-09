@@ -1,0 +1,117 @@
+#ОДНОФАКТОРНЫЙ ДИСПЕРСИОННЫЙ АНАЛИЗ(ONE-WAY ANOVA) - однофакторный, потому что как фактор(независимую переменную) используем 1 фактор(тип терапии)
+import pandas
+from scipy.stats import f
+import seaborn as sns
+
+data = pandas.read_csv('Desktop/genetherapy.csv')
+
+#H0: В ГС на самом деле средний уровень экспрессии гена будет одинаковый при использовании всех 4-х типо терапии. 
+# M1 = M2 = M3 = M4
+
+#Считаем среднюю экспрессию гена по каждой группе
+A_expr = data.loc[data['Therapy'] == 'A']['expr']
+mean_A = statistics.mean(A_expr)
+
+B_expr = data.loc[data['Therapy'] == 'B']['expr']
+mean_B = statistics.mean(B_expr)
+
+C_expr = data.loc[data['Therapy'] == 'C']['expr']
+mean_C = statistics.mean(C_expr)
+
+D_expr = data.loc[data['Therapy'] == 'D']['expr']
+mean_D = statistics.mean(D_expr)
+
+
+#Считаем внутригрупповую сумму квадратов SSW
+sum_SSW_A, sum_SSW_B, sum_SSW_C, sum_SSW_D = 0, 0, 0, 0
+
+for expr, row in data.iterrows():
+    if  row['Therapy'] == 'A':
+        sum_sqrs_A = (row['expr'] - mean_A) ** 2
+        sum_SSW_A = sum_SSW_A + sum_sqrs_A 
+    elif row['Therapy'] == 'B':
+        sum_sqrs_B = (row['expr'] - mean_B) ** 2
+        sum_SSW_B += sum_sqrs_B
+    elif row['Therapy'] == 'C':
+        sum_sqrs_C = (row['expr'] - mean_C) ** 2
+        sum_SSW_C += sum_sqrs_C
+    elif row['Therapy'] == 'D':
+        sum_sqrs_D = (row['expr'] - mean_D) ** 2
+        sum_SSW_D += sum_sqrs_D
+SSW = sum([sum_SSW_A, sum_SSW_B, sum_SSW_C, sum_SSW_D])
+
+print(f'Внутригрупповая сумма квадратов SSW = {SSW}')
+
+
+#Считаем степень свободы внутригрупповую df = N - m
+
+m = 4 #кол-во групп (типов терапии)
+
+data.head()
+N = len(data['expr'])
+
+df_SSW = N - m
+print(f'df_SSW={df_SSW }')
+
+print()
+
+
+
+#Считаем межгрупповую сумму квадратов SSB
+N = len(data[data['Therapy']=='A'])
+
+mean_list = [mean_A, mean_B, mean_C, mean_D]
+total_mean = statistics.mean(mean_list)
+SSB = 0
+
+for i in mean_list:
+    SSB_sqrs = N * (i - total_mean) ** 2
+    SSB += SSB_sqrs
+    
+print(f'Межгрупповая сумма квадратов SSB = {SSB}')
+
+#Считаем степень свободы межгрупповую df = m - 1
+
+df_SSB = m - 1
+print(f'df_SSB={df_SSB}')
+
+print()
+
+
+#Считаем внутригрупповой средний квадрат: 
+MSwg = SSW / df_SSW
+print(f'Внутригрупповой средний квадрат: {MSwg}')
+
+#Считаем межгрупповой средний квадрат:  
+MSbg = SSB / df_SSB
+print(f'Межгрупповой средний квадрат: {MSbg}')
+
+
+print()
+
+
+#Считаем F-значение: 
+F_stat = MSbg / MSwg 
+print(f'F-значение = {F_stat}')
+
+#Получаем F-критическое: 
+alpha = 0.05
+
+F_crit = f.ppf(1 - alpha, df_SSB, df_SSW)
+print(f'F критическое при alpha = {alpha}, df межгрупповых - {df_SSB}, df внутригрупповых - {df_SSW} = {F_crit}')
+
+print()
+
+p_value = 1 - f.cdf(F_stat, df_SSB, df_SSW)
+print(f'Вероятноть получить такие или еще более экстремальные отклонения от F критического: \np_value = {p_value}')
+print()
+
+print('Вывод:')
+if F_stat >= F_crit and p_value < alpha: 
+    print('Отвергаем H0, принимаем альтернативную гипотезу о том, что различия как минимум между двумя группами статистически значимые')
+else: 
+    print('Не можем отвергнуть H0, различия между группами не статистически значимые')
+ 
+print()
+#Визуализируем через boxplot:     
+sns.boxplot(data = data, x='Therapy', y = 'expr', notch=True)
